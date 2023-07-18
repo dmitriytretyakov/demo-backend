@@ -1,6 +1,8 @@
-import {verify} from "jsonwebtoken";
+import {JwtPayload, verify} from "jsonwebtoken";
 import {NextFunction, Request, Response} from "express";
-import settings from "../settings";
+import settings from "../../settings";
+
+export let payload: JwtPayload | undefined;
 
 export const jwtAuth = (req: Request, res: Response, next: NextFunction) => {
     if(req.url === '/api/user/auth') {
@@ -26,7 +28,8 @@ export const jwtAuth = (req: Request, res: Response, next: NextFunction) => {
             });
     }
 
-    verify(token_parts[1], settings.jwt_secret, function (err, decoded) {
+    verify(token_parts[1], settings.jwt_secret, function (err, decoded: JwtPayload) {
+        payload = decoded;
         if (err) {
             return res
                 .status(401)
