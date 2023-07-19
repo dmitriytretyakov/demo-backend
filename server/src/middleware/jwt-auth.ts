@@ -5,7 +5,7 @@ import settings from "../../settings";
 export let payload: JwtPayload | undefined;
 
 export const jwtAuth = (req: Request, res: Response, next: NextFunction) => {
-    if(req.url === '/api/user/auth') {
+    if(req.url === '/api/user/auth' || req.method === 'OPTIONS') {
         return next();
     }
 
