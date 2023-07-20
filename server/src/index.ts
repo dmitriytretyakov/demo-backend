@@ -1,13 +1,13 @@
-import { AppDataSource } from "./data-source"
-import { User } from "./entity/User"
+import {AppDataSource} from "./data-source"
+import {User} from "./entity/User"
 import cors from 'cors';
-import express, {Express, Request, Response } from 'express';
+import express, {Express, Request, Response} from 'express';
 import {sign} from 'jsonwebtoken';
 import {jwtAuth, payload} from "./middleware/jwt-auth";
 import {rateLimiter} from "./middleware/rate-limiter";
 import "reflect-metadata";
 import settings from "./../settings";
-import {body} from "express-validator";
+import {body, validationResult} from "express-validator";
 
 AppDataSource.initialize().then(async () => {
     const app: Express = express();
@@ -15,7 +15,6 @@ AppDataSource.initialize().then(async () => {
     app.use(jwtAuth);
     app.use(rateLimiter);
     app.use(cors());
-    // parse application/x-www-form-urlencoded
     app.use(express.json());
 
     app.get('/api/user/auth', async function (req: Request, res: Response) {
@@ -40,14 +39,24 @@ AppDataSource.initialize().then(async () => {
         return res.json(user.state);
     });
 
-    app.post('/api/user/state', async function (req: Request, res: Response) {
-        const user = await AppDataSource.getRepository(User).findOneBy({
-            id: payload.user_id,
+    app.post(
+        '/api/user/state',
+        body('clicks_count').isInt({min: 1}),
+        async function (req: Request, res: Response) {
+            const result = validationResult(req);
+            if (result.isEmpty()) {
+                const user = await AppDataSource.getRepository(User).findOneBy({
+                    id: payload.user_id,
+                });
+                user.state.clicksCount = user.state.clicksCount + req.body.clicks_count;
+                await AppDataSource.manager.save(user);
+                return res.json({});
+            } else {
+                return res
+                    .status(422)
+                    .json(result.array())
+            }
         });
-        user.state.clicksCount = user.state.clicksCount + req.body.clicks_count;
-        await AppDataSource.manager.save(user);
-        return res.json({});
-    });
 
     app.listen(settings.port, () => {
         console.log(`Example app listening on port ${settings.port}`)
